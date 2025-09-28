@@ -53,7 +53,7 @@ BookHaven follows a client-server architecture with clear separation of concerns
 
 ```
 ┌─────────────────┐    HTTP/JSON    ┌─────────────────┐
-│   React Client  │ ◄──────────────► │  Flask API      │
+│   React Client  │ ◄──────────────►│  Flask API      │
 │   (Frontend)    │                 │   (Backend)     │
 └─────────────────┘                 └─────────────────┘
          │                                   │
