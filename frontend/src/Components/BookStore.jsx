@@ -6,6 +6,7 @@ import ShoppingCartSidebar from "./ShoppingCartSidebar";
 import CheckoutPage from "./CheckoutPage";
 import AuthModal from "./AuthModal";
 import UserProfileModal from "./UserProfileModal";
+import OrdersModal from "./OrdersModal";
 import { useAuth } from "./useAuth";
 import apiService from "./apiService";
 
@@ -19,12 +20,15 @@ const BookStore = () => {
   const [favorites, setFavorites] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedAuthor, setSelectedAuthor] = useState("");
+  const [selectedPublisher, setSelectedPublisher] = useState("");
   const [sortBy, setSortBy] = useState("title");
   const [showCart, setShowCart] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showOrdersModal, setShowOrdersModal] = useState(false);
   const [authMode, setAuthMode] = useState("login");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -36,13 +40,26 @@ const BookStore = () => {
         setLoading(true);
         setError(null);
 
+        // Build query parameters
+        const params = {
+          search: searchTerm,
+          sort: sortBy,
+        };
+
+        // Only add filters if they're not default values
+        if (selectedCategory !== "all") {
+          params.category = selectedCategory;
+        }
+        if (selectedAuthor) {
+          params.author = selectedAuthor;
+        }
+        if (selectedPublisher) {
+          params.publisher = selectedPublisher;
+        }
+
         // Fetch books and categories in parallel
         const [booksResponse, categoriesResponse] = await Promise.all([
-          apiService.getBooks({
-            search: searchTerm,
-            category: selectedCategory,
-            sort: sortBy,
-          }),
+          apiService.getBooks(params),
           apiService.getCategories(),
         ]);
 
@@ -65,7 +82,14 @@ const BookStore = () => {
     if (!isInitializing) {
       fetchBooksAndCategories();
     }
-  }, [searchTerm, selectedCategory, sortBy, isInitializing]);
+  }, [
+    searchTerm,
+    selectedCategory,
+    selectedAuthor,
+    selectedPublisher,
+    sortBy,
+    isInitializing,
+  ]);
 
   // Fetch cart when user is authenticated
   useEffect(() => {
@@ -181,12 +205,12 @@ const BookStore = () => {
         setCart([]); // Clear cart
         setShowCheckout(false);
         alert(
-          "Order placed successfully! You will receive a confirmation email shortly."
+          "Order placed successfully! Order #" + response.order.orderNumber
         );
       }
     } catch (error) {
       console.error("Error creating order:", error);
-      alert("Failed to place order. Please try again.");
+      throw error; // Re-throw to let CheckoutPage handle it
     }
   };
 
@@ -197,6 +221,15 @@ const BookStore = () => {
 
   const handleViewProfile = () => {
     setShowProfileModal(true);
+  };
+
+  const handleViewOrders = () => {
+    if (!isAuthenticated) {
+      setAuthMode("login");
+      setShowAuthModal(true);
+      return;
+    }
+    setShowOrdersModal(true);
   };
 
   if (isInitializing) {
@@ -233,6 +266,7 @@ const BookStore = () => {
         showMobileMenu={showMobileMenu}
         setShowMobileMenu={setShowMobileMenu}
         onViewProfile={handleViewProfile}
+        onViewOrders={handleViewOrders}
         onShowAuth={handleShowAuth}
       />
 
@@ -262,6 +296,10 @@ const BookStore = () => {
               setSelectedCategory={setSelectedCategory}
               sortBy={sortBy}
               setSortBy={setSortBy}
+              selectedAuthor={selectedAuthor}
+              setSelectedAuthor={setSelectedAuthor}
+              selectedPublisher={selectedPublisher}
+              setSelectedPublisher={setSelectedPublisher}
             />
 
             <BooksGrid
@@ -296,6 +334,11 @@ const BookStore = () => {
       <UserProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
+      />
+
+      <OrdersModal
+        isOpen={showOrdersModal}
+        onClose={() => setShowOrdersModal(false)}
       />
     </div>
   );
