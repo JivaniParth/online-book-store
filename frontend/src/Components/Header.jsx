@@ -1,5 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Search, ShoppingCart, Menu, X, User, LogOut } from "lucide-react";
+import {
+  Search,
+  ShoppingCart,
+  Menu,
+  X,
+  User,
+  LogOut,
+  Package,
+} from "lucide-react";
 import { useAuth } from "./useAuth";
 
 const Header = ({
@@ -11,6 +19,7 @@ const Header = ({
   showMobileMenu,
   setShowMobileMenu,
   onViewProfile,
+  onViewOrders,
   onShowAuth,
 }) => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -111,6 +120,16 @@ const Header = ({
                       <span>View Profile</span>
                     </button>
                     <button
+                      onClick={() => {
+                        onViewOrders();
+                        setShowUserMenu(false);
+                      }}
+                      className="flex items-center space-x-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+                    >
+                      <Package className="w-4 h-4" />
+                      <span>My Orders</span>
+                    </button>
+                    <button
                       onClick={handleLogout}
                       className="flex items-center space-x-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
                     >
@@ -186,6 +205,16 @@ const Header = ({
                 >
                   <User className="w-5 h-5" />
                   <span>View Profile</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onViewOrders();
+                    setShowMobileMenu(false);
+                  }}
+                  className="flex items-center space-x-3 w-full px-3 py-2 text-left text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-150"
+                >
+                  <Package className="w-5 h-5" />
+                  <span>My Orders</span>
                 </button>
                 <button
                   onClick={() => {

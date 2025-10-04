@@ -15,6 +15,8 @@ const OrdersModal = ({ isOpen, onClose }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState(null);
+  const [orderDetails, setOrderDetails] = useState({});
+  const [loadingDetails, setLoadingDetails] = useState({});
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -36,6 +38,24 @@ const OrdersModal = ({ isOpen, onClose }) => {
       setError("Failed to load orders. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOrderDetails = async (orderId) => {
+    if (orderDetails[orderId]) {
+      return; // Already loaded
+    }
+
+    try {
+      setLoadingDetails((prev) => ({ ...prev, [orderId]: true }));
+      const response = await apiService.getOrder(orderId);
+      if (response.success) {
+        setOrderDetails((prev) => ({ ...prev, [orderId]: response.order }));
+      }
+    } catch (error) {
+      console.error("Error fetching order details:", error);
+    } finally {
+      setLoadingDetails((prev) => ({ ...prev, [orderId]: false }));
     }
   };
 
@@ -94,6 +114,11 @@ const OrdersModal = ({ isOpen, onClose }) => {
       const response = await apiService.cancelOrder(orderId);
       if (response.success) {
         await fetchOrders();
+        // Refresh order details if expanded
+        if (expandedOrder === orderId) {
+          setOrderDetails((prev) => ({ ...prev, [orderId]: null }));
+          await fetchOrderDetails(orderId);
+        }
         alert("Order cancelled successfully");
       }
     } catch (error) {
@@ -102,8 +127,13 @@ const OrdersModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const toggleOrderDetails = (orderId) => {
-    setExpandedOrder(expandedOrder === orderId ? null : orderId);
+  const toggleOrderDetails = async (orderId) => {
+    if (expandedOrder === orderId) {
+      setExpandedOrder(null);
+    } else {
+      setExpandedOrder(orderId);
+      await fetchOrderDetails(orderId);
+    }
   };
 
   if (!isOpen) return null;
@@ -165,170 +195,218 @@ const OrdersModal = ({ isOpen, onClose }) => {
               </div>
             ) : (
               <div className="space-y-4">
-                {orders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
-                  >
+                {orders.map((order) => {
+                  const details = orderDetails[order.id];
+                  const isLoading = loadingDetails[order.id];
+
+                  return (
                     <div
-                      className="p-4 cursor-pointer"
-                      onClick={() => toggleOrderDetails(order.id)}
+                      key={order.id}
+                      className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          {getStatusIcon(order.status)}
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <h3 className="font-semibold text-gray-900">
-                                Order #{order.orderNumber}
-                              </h3>
-                              <span
-                                className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(
-                                  order.status
-                                )}`}
-                              >
-                                {order.status.charAt(0).toUpperCase() +
-                                  order.status.slice(1)}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {formatDate(order.createdAt)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <div className="text-right">
-                            <p className="text-sm text-gray-600">
-                              {order.itemsCount} items
-                            </p>
-                            <p className="text-lg font-bold text-gray-900">
-                              ${parseFloat(order.totalAmount).toFixed(2)}
-                            </p>
-                          </div>
-                          {expandedOrder === order.id ? (
-                            <ChevronUp className="w-5 h-5 text-gray-400" />
-                          ) : (
-                            <ChevronDown className="w-5 h-5 text-gray-400" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {expandedOrder === order.id && (
-                      <div className="border-t border-gray-200 p-4 bg-gray-50">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <h4 className="font-semibold text-gray-900 mb-3">
-                              Order Items
-                            </h4>
-                            <div className="space-y-3">
-                              {order.items?.map((item) => (
-                                <div
-                                  key={item.id}
-                                  className="flex items-center space-x-3 bg-white p-3 rounded-lg"
+                      <div
+                        className="p-4 cursor-pointer"
+                        onClick={() => toggleOrderDetails(order.id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            {getStatusIcon(order.status)}
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <h3 className="font-semibold text-gray-900">
+                                  Order #{order.orderNumber}
+                                </h3>
+                                <span
+                                  className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(
+                                    order.status
+                                  )}`}
                                 >
-                                  <img
-                                    src={item.image}
-                                    alt={item.title}
-                                    className="w-12 h-16 object-cover rounded"
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <h5 className="text-sm font-medium text-gray-900 line-clamp-1">
-                                      {item.title}
-                                    </h5>
-                                    <p className="text-xs text-gray-600">
-                                      {item.author}
-                                    </p>
-                                    <p className="text-sm text-gray-700 mt-1">
-                                      Qty: {item.quantity} × $
-                                      {parseFloat(item.pricePerItem).toFixed(2)}
-                                    </p>
-                                  </div>
-                                  <p className="text-sm font-semibold text-gray-900">
-                                    ${parseFloat(item.totalPrice).toFixed(2)}
-                                  </p>
-                                </div>
-                              ))}
+                                  {order.status.charAt(0).toUpperCase() +
+                                    order.status.slice(1)}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {formatDate(order.createdAt)}
+                              </p>
                             </div>
                           </div>
-
-                          <div>
-                            <h4 className="font-semibold text-gray-900 mb-3">
-                              Order Summary
-                            </h4>
-                            <div className="bg-white p-4 rounded-lg space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Subtotal:</span>
-                                <span className="text-gray-900">
-                                  $
-                                  {order.totals?.subtotal
-                                    ? parseFloat(order.totals.subtotal).toFixed(
-                                        2
-                                      )
-                                    : "0.00"}
-                                </span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Tax:</span>
-                                <span className="text-gray-900">
-                                  $
-                                  {order.totals?.taxAmount
-                                    ? parseFloat(
-                                        order.totals.taxAmount
-                                      ).toFixed(2)
-                                    : "0.00"}
-                                </span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Shipping:</span>
-                                <span className="text-gray-900">
-                                  {order.totals?.shippingCost === 0
-                                    ? "FREE"
-                                    : `$${parseFloat(
-                                        order.totals?.shippingCost || 0
-                                      ).toFixed(2)}`}
-                                </span>
-                              </div>
-                              <div className="border-t border-gray-200 pt-2 mt-2">
-                                <div className="flex justify-between font-semibold">
-                                  <span className="text-gray-900">Total:</span>
-                                  <span className="text-indigo-600">
-                                    ${parseFloat(order.totalAmount).toFixed(2)}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <h4 className="font-semibold text-gray-900 mt-4 mb-2">
-                              Shipping Address
-                            </h4>
-                            <div className="bg-white p-4 rounded-lg text-sm text-gray-700">
-                              <p className="font-medium text-gray-900">
-                                {order.customer?.fullName}
+                          <div className="flex items-center space-x-4">
+                            <div className="text-right">
+                              <p className="text-sm text-gray-600">
+                                {order.itemsCount} items
                               </p>
-                              <p>{order.shipping?.fullAddress}</p>
-                              <p className="mt-2 text-gray-600">
-                                {order.customer?.phone}
+                              <p className="text-lg font-bold text-gray-900">
+                                ${parseFloat(order.totalAmount).toFixed(2)}
                               </p>
                             </div>
-
-                            {order.status.toLowerCase() === "pending" && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCancelOrder(order.id);
-                                }}
-                                className="w-full mt-4 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium"
-                              >
-                                Cancel Order
-                              </button>
+                            {expandedOrder === order.id ? (
+                              <ChevronUp className="w-5 h-5 text-gray-400" />
+                            ) : (
+                              <ChevronDown className="w-5 h-5 text-gray-400" />
                             )}
                           </div>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      {expandedOrder === order.id && (
+                        <div className="border-t border-gray-200 p-4 bg-gray-50">
+                          {isLoading ? (
+                            <div className="text-center py-8">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                              <p className="mt-2 text-sm text-gray-600">
+                                Loading order details...
+                              </p>
+                            </div>
+                          ) : details ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div>
+                                <h4 className="font-semibold text-gray-900 mb-3">
+                                  Order Items
+                                </h4>
+                                <div className="space-y-3">
+                                  {details.items && details.items.length > 0 ? (
+                                    details.items.map((item) => (
+                                      <div
+                                        key={item.id}
+                                        className="flex items-center space-x-3 bg-white p-3 rounded-lg"
+                                      >
+                                        <img
+                                          src={
+                                            item.image ||
+                                            "/placeholder-book.png"
+                                          }
+                                          alt={item.title}
+                                          className="w-12 h-16 object-cover rounded"
+                                          onError={(e) => {
+                                            e.target.src =
+                                              "/placeholder-book.png";
+                                          }}
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                          <h5 className="text-sm font-medium text-gray-900 line-clamp-1">
+                                            {item.title}
+                                          </h5>
+                                          <p className="text-xs text-gray-600">
+                                            {item.author}
+                                          </p>
+                                          <p className="text-sm text-gray-700 mt-1">
+                                            Qty: {item.quantity} × $
+                                            {parseFloat(
+                                              item.pricePerItem
+                                            ).toFixed(2)}
+                                          </p>
+                                        </div>
+                                        <p className="text-sm font-semibold text-gray-900">
+                                          $
+                                          {parseFloat(item.totalPrice).toFixed(
+                                            2
+                                          )}
+                                        </p>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <p className="text-sm text-gray-500">
+                                      No items found
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div>
+                                <h4 className="font-semibold text-gray-900 mb-3">
+                                  Order Summary
+                                </h4>
+                                <div className="bg-white p-4 rounded-lg space-y-2">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">
+                                      Subtotal:
+                                    </span>
+                                    <span className="text-gray-900">
+                                      $
+                                      {details.totals?.subtotal
+                                        ? parseFloat(
+                                            details.totals.subtotal
+                                          ).toFixed(2)
+                                        : "0.00"}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Tax:</span>
+                                    <span className="text-gray-900">
+                                      $
+                                      {details.totals?.taxAmount
+                                        ? parseFloat(
+                                            details.totals.taxAmount
+                                          ).toFixed(2)
+                                        : "0.00"}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">
+                                      Shipping:
+                                    </span>
+                                    <span className="text-gray-900">
+                                      {details.totals?.shippingCost === 0
+                                        ? "FREE"
+                                        : `$${parseFloat(
+                                            details.totals?.shippingCost || 0
+                                          ).toFixed(2)}`}
+                                    </span>
+                                  </div>
+                                  <div className="border-t border-gray-200 pt-2 mt-2">
+                                    <div className="flex justify-between font-semibold">
+                                      <span className="text-gray-900">
+                                        Total:
+                                      </span>
+                                      <span className="text-indigo-600">
+                                        $
+                                        {parseFloat(
+                                          details.totals?.totalAmount ||
+                                            order.totalAmount
+                                        ).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <h4 className="font-semibold text-gray-900 mt-4 mb-2">
+                                  Shipping Address
+                                </h4>
+                                <div className="bg-white p-4 rounded-lg text-sm text-gray-700">
+                                  <p className="font-medium text-gray-900">
+                                    {details.customer?.fullName || "N/A"}
+                                  </p>
+                                  <p>
+                                    {details.shipping?.fullAddress || "N/A"}
+                                  </p>
+                                  <p className="mt-2 text-gray-600">
+                                    {details.customer?.phone || "N/A"}
+                                  </p>
+                                </div>
+
+                                {order.status.toLowerCase() === "pending" && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCancelOrder(order.id);
+                                    }}
+                                    className="w-full mt-4 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium"
+                                  >
+                                    Cancel Order
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-500">
+                              Failed to load order details
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
