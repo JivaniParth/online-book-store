@@ -79,10 +79,7 @@ def get_order(order_id):
 @orders_bp.route("/create/", methods=["POST"])
 @jwt_required()
 def create_order():
-    """Create new order from cart"""
     try:
-        logger.info(f"\n=== Creating Order ===")
-
         from database import db
         from models.cart import CartItem
         from models.order import Order, OrderItem
@@ -90,103 +87,86 @@ def create_order():
         from decimal import Decimal
 
         user_id = int(get_jwt_identity())
-        logger.info(f"User ID: {user_id}")
-
         data = request.get_json()
-        logger.info(f"Request data: {data}")
 
-        # Validate required fields
-        required_fields = [
-            "firstName",
-            "lastName",
-            "email",
-            "address",
-            "city",
-            "postalCode",
-        ]
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({"error": f"{field} is required"}), 400
+        # ✅ START TRANSACTION
+        with db.session.begin_nested():
+            # Get user's cart items with FOR UPDATE lock
+            cart_items = (
+                CartItem.query.filter_by(user_id=user_id).with_for_update().all()
+            )
 
-        # Get user's cart items
-        cart_items = CartItem.query.filter_by(user_id=user_id).all()
-        logger.info(f"Cart items found: {len(cart_items)}")
+            if not cart_items:
+                return jsonify({"error": "Cart is empty"}), 400
 
-        if not cart_items:
-            return jsonify({"error": "Cart is empty"}), 400
+            # Validate stock for all items WITH LOCK
+            for cart_item in cart_items:
+                book = (
+                    Book.query.filter_by(isbn=cart_item.book_id)
+                    .with_for_update()
+                    .first()
+                )
+                if not book:
+                    db.session.rollback()
+                    return (
+                        jsonify({"error": f"Book not found: {cart_item.book_id}"}),
+                        404,
+                    )
 
-        # Validate stock for all items
-        for cart_item in cart_items:
-            book = Book.query.filter_by(isbn=cart_item.book_id).first()
-            if not book:
-                return jsonify({"error": f"Book not found: {cart_item.book_id}"}), 404
+                if cart_item.quantity > book.stock_quantity:
+                    db.session.rollback()
+                    return (
+                        jsonify(
+                            {
+                                "error": f"Insufficient stock for {book.title}. Available: {book.stock_quantity}"
+                            }
+                        ),
+                        400,
+                    )
 
-            if cart_item.quantity > book.stock_quantity:
-                return (
-                    jsonify(
-                        {
-                            "error": f"Insufficient stock for {book.title}. Available: {book.stock_quantity}"
-                        }
-                    ),
-                    400,
+            # Create order
+            order = Order(
+                user_id=user_id,
+                first_name=data["firstName"],
+                last_name=data["lastName"],
+                email=data["email"],
+                phone=data.get("phone", ""),
+                address=data["address"],
+                city=data["city"],
+                postal_code=data["postalCode"],
+                payment_method=data.get("paymentMethod", "cod"),
+            )
+
+            db.session.add(order)
+            db.session.flush()
+
+            # Create order items and update stock
+            for cart_item in cart_items:
+                book = (
+                    Book.query.filter_by(isbn=cart_item.book_id)
+                    .with_for_update()
+                    .first()
                 )
 
-        logger.info("✅ Validation complete, creating order...")
+                order_item = OrderItem(
+                    book_id=cart_item.book_id,
+                    quantity=cart_item.quantity,
+                    price_per_item=book.price,
+                )
+                order.order_items.append(order_item)
 
-        # Create order
-        order = Order(
-            user_id=user_id,
-            first_name=data["firstName"],
-            last_name=data["lastName"],
-            email=data["email"],
-            phone=data.get("phone", ""),
-            address=data["address"],
-            city=data["city"],
-            postal_code=data["postalCode"],
-            payment_method=data.get("paymentMethod", "cod"),
-        )
+                # Update book stock
+                book.stock_quantity -= cart_item.quantity
 
-        db.session.add(order)
-        db.session.flush()  # Get order_id
-        logger.info(f"✅ Order created with ID: {order.order_id}")
-
-        # Create order items and update stock
-        for cart_item in cart_items:
-            book = Book.query.filter_by(isbn=cart_item.book_id).first()
-
-            # Create order item with ISBN as book_id
-            order_item = OrderItem(
-                book_id=cart_item.book_id,  # This is the ISBN
-                quantity=cart_item.quantity,
-                price_per_item=book.price,
-            )
-            order.order_items.append(order_item)
-
-            # Update book stock
-            book.stock_quantity -= cart_item.quantity
-            logger.info(f"✅ Added {cart_item.quantity}x {book.title}, updated stock")
-
-        # Calculate order totals
-        try:
+            # Calculate totals
             subtotal = sum(item.total_price for item in order.order_items)
             tax_amount = subtotal * Decimal("0.10")
             order.total_amount = subtotal + tax_amount
-            logger.info(
-                f"✅ Order totals calculated: subtotal={subtotal}, tax={tax_amount}, total={order.total_amount}"
-            )
-        except Exception as calc_error:
-            logger.error(f"❌ Total calculation failed: {calc_error}")
-            # Fallback calculation
-            order.total_amount = (
-                sum(float(item.total_price) for item in order.order_items) * 1.10
-            )
 
-        # Clear user's cart
-        CartItem.query.filter_by(user_id=user_id).delete()
-        logger.info("✅ Cart cleared")
+            # Clear cart
+            CartItem.query.filter_by(user_id=user_id).delete()
 
         db.session.commit()
-        logger.info("✅ Order committed to database")
 
         return (
             jsonify(
@@ -201,12 +181,6 @@ def create_order():
 
     except Exception as e:
         logger.error(f"❌ Order creation failed: {str(e)}")
-        import traceback
-
-        logger.error(f"Traceback: {traceback.format_exc()}")
-
-        from database import db
-
         db.session.rollback()
         return jsonify({"error": "Failed to create order", "details": str(e)}), 500
 

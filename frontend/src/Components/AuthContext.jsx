@@ -68,6 +68,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     apiService.logout();
+    // ✅ Clear cart on logout
+    window.location.reload(); // This will reset all state
   };
 
   const updateProfile = async (updatedData) => {

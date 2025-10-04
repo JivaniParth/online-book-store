@@ -47,9 +47,10 @@ const BookStore = () => {
         };
 
         // Only add filters if they're not default values
-        if (selectedCategory !== "all") {
-          params.category = selectedCategory;
+        if (selectedCategory && selectedCategory !== "all") {
+          params.category = selectedCategory; // Send slug directly
         }
+
         if (selectedAuthor) {
           params.author = selectedAuthor;
         }
@@ -102,6 +103,10 @@ const BookStore = () => {
           }
         } catch (error) {
           console.error("Error fetching cart:", error);
+          // ✅ Don't show error to user if it's just missing token
+          if (!error.message.includes("token")) {
+            setError("Failed to load cart");
+          }
         }
       } else {
         setCart([]);

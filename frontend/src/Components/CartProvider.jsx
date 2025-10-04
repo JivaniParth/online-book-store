@@ -1,5 +1,6 @@
 import React, { createContext, useReducer, useCallback } from "react";
 import { cartReducer } from "./cartReducer";
+import CartContext from "./CartContext";
 import { CART_ACTIONS, initialCartState } from "./cartTypes";
 
 // Cart Provider Component

@@ -83,6 +83,7 @@ class User(db.Model):
             "postalCode": "",  # Not in your DDL
             "joinedDate": self.registration_date.strftime("%Y-%m-%d"),
             "avatar": self.get_avatar_url(),
+            "user_type": self.user_type,
         }
 
     def __repr__(self):

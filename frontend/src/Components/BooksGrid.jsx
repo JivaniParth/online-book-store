@@ -1,6 +1,7 @@
 import React from "react";
 import { Search } from "lucide-react";
 import BookCard from "./BookCard";
+import BookCardSkeleton from "./BookCardSkeleton";
 
 const BooksGrid = ({
   filteredBooks,
@@ -24,7 +25,13 @@ const BooksGrid = ({
       </div>
 
       {/* Books Grid */}
-      {filteredBooks.length > 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[...Array(8)].map((_, i) => (
+            <BookCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : filteredBooks.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredBooks.map((book) => (
             <BookCard

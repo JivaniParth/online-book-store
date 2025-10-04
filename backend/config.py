@@ -36,7 +36,9 @@ class Config:
     }
 
     # CORS configuration
-    CORS_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(",")
+    CORS_SUPPORTS_CREDENTIALS = True
+    CORS_MAX_AGE = 3600
 
     # Pagination
     POSTS_PER_PAGE = 12

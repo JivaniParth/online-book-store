@@ -16,7 +16,7 @@ import { useAuth } from "./useAuth";
 import apiService from "./apiService";
 
 // Import admin components
-import AdminStats from "./admin/adminStats";
+import AdminStats from "./admin/AdminStats";
 import AdminBooks from "./admin/AdminBooks";
 import AdminUsers from "./admin/AdminUsers";
 import AdminOrders from "./admin/AdminOrders";

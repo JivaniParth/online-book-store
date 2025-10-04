@@ -11,11 +11,6 @@ def create_app():
     # Initialize Flask app
     app = Flask(__name__)
 
-    # CRITICAL: Make sure this matches the key used during login
-    app.config["JWT_SECRET_KEY"] = "your-secret-key"  # Must be the same everywhere!
-    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=24)  # Adjust as needed
-    app.config["JWT_ALGORITHM"] = "HS256"  # Default, but make sure it's consistent
-
     # Load configuration
     app.config.from_object(Config)
 
@@ -24,12 +19,11 @@ def create_app():
     migrate = Migrate(app, db)
     cors = CORS(
         app,
-        origins=[
-            "http://localhost:5173",
-            "http://localhost:3000",
-            "http://127.0.0.1:5173",
-            "http://127.0.0.1:3000",
-        ],
+        origins=Config.CORS_ORIGINS,
+        supports_credentials=Config.CORS_SUPPORTS_CREDENTIALS,
+        max_age=Config.CORS_MAX_AGE,
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     )
     jwt = JWTManager(app)
 
@@ -74,18 +68,58 @@ def create_app():
         db.session.rollback()
         return jsonify({"error": "Internal server error"}), 500
 
-    # JWT error handlers
+    # jwt error handlers
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
-        return jsonify({"error": "Token has expired"}), 401
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Token has expired",
+                    "message": "Please login again",
+                }
+            ),
+            401,
+        )
 
     @jwt.invalid_token_loader
     def invalid_token_callback(error):
-        return jsonify({"error": "Invalid token"}), 401
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Invalid token",
+                    "message": "Authentication failed",
+                }
+            ),
+            401,
+        )
 
     @jwt.unauthorized_loader
     def missing_token_callback(error):
-        return jsonify({"error": "Authorization token is required"}), 401
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Authorization token is required",
+                    "message": "Please login to continue",
+                }
+            ),
+            401,
+        )
+
+    @jwt.revoked_token_loader
+    def revoked_token_callback(jwt_header, jwt_payload):
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Token has been revoked",
+                    "message": "Please login again",
+                }
+            ),
+            401,
+        )
 
     return app
 
