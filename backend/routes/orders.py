@@ -141,6 +141,7 @@ def create_order():
             db.session.flush()
 
             # Create order items and update stock
+            subtotal = Decimal("0.00")
             for cart_item in cart_items:
                 book = (
                     Book.query.filter_by(isbn=cart_item.book_id)
@@ -155,13 +156,24 @@ def create_order():
                 )
                 order.order_items.append(order_item)
 
+                # Calculate subtotal
+                subtotal += Decimal(str(book.price)) * cart_item.quantity
+
                 # Update book stock
                 book.stock_quantity -= cart_item.quantity
 
             # Calculate totals
-            subtotal = sum(item.total_price for item in order.order_items)
-            tax_amount = subtotal * Decimal("0.10")
-            order.total_amount = subtotal + tax_amount
+            tax_amount = subtotal * Decimal("0.08")  # 8% tax
+            shipping_cost = Decimal("0.00") if subtotal >= 50 else Decimal("5.99")
+            total_amount = subtotal + tax_amount + shipping_cost
+
+            # Set the total amount
+            order.total_amount = total_amount
+
+            logger.info(f"✅ Order total calculated: ${total_amount}")
+            logger.info(f"   Subtotal: ${subtotal}")
+            logger.info(f"   Tax: ${tax_amount}")
+            logger.info(f"   Shipping: ${shipping_cost}")
 
             # Clear cart
             CartItem.query.filter_by(user_id=user_id).delete()

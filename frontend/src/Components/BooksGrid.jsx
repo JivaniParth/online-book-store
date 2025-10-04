@@ -1,3 +1,6 @@
+// Replace the entire BooksGrid.jsx component
+// frontend/src/Components/BooksGrid.jsx
+
 import React from "react";
 import { Search } from "lucide-react";
 import BookCard from "./BookCard";
@@ -10,6 +13,7 @@ const BooksGrid = ({
   addToCart,
   selectedCategory,
   categories,
+  loading = false, // Add default value for loading prop
 }) => {
   return (
     <main className="flex-1 min-w-0">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Plus,
   Edit,
@@ -35,11 +35,7 @@ const AdminBooks = () => {
     total: 0,
   });
 
-  useEffect(() => {
-    fetchBooks();
-  }, [searchTerm, pagination.page]);
-
-  const fetchBooks = async () => {
+  const fetchBooks = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiService.adminGetBooks({
@@ -56,7 +52,11 @@ const AdminBooks = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, searchTerm]);
+
+  useEffect(() => {
+    fetchBooks();
+  }, [fetchBooks]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

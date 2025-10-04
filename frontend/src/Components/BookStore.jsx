@@ -314,6 +314,7 @@ const BookStore = () => {
               addToCart={addToCart}
               selectedCategory={selectedCategory}
               categories={categories}
+              loading={loading} // Add this line
             />
           </div>
         )}

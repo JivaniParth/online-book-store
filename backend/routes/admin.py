@@ -384,6 +384,25 @@ def admin_get_orders():
         return jsonify({"error": str(e)}), 500
 
 
+@admin_bp.route("/orders/<int:order_id>", methods=["GET"])
+@admin_required
+def admin_get_order_details(order_id):
+    """Get specific order details for admin"""
+    try:
+        from models.order import Order
+
+        order = Order.query.get(order_id)
+
+        if not order:
+            return jsonify({"error": "Order not found"}), 404
+
+        return jsonify({"success": True, "order": order.to_dict()}), 200
+
+    except Exception as e:
+        logger.error(f"Error fetching order {order_id}: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
 @admin_bp.route("/orders/<int:order_id>", methods=["PUT"])
 @admin_required
 def admin_update_order(order_id):

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Package,
   Search,
@@ -24,11 +24,7 @@ const AdminOrders = () => {
     total: 0,
   });
 
-  useEffect(() => {
-    fetchOrders();
-  }, [pagination.page, statusFilter]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
@@ -49,14 +45,19 @@ const AdminOrders = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, statusFilter]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const fetchOrderDetails = async (orderId) => {
     if (orderDetails[orderId]) return;
 
     try {
       setLoadingDetails((prev) => ({ ...prev, [orderId]: true }));
-      const response = await apiService.getOrder(orderId);
+      // Use admin-specific endpoint instead of regular getOrder
+      const response = await apiService.adminGetOrderDetails(orderId);
       if (response.success) {
         setOrderDetails((prev) => ({ ...prev, [orderId]: response.order }));
       }
@@ -113,8 +114,29 @@ const AdminOrders = () => {
       completed: "bg-green-100 text-green-800",
       failed: "bg-red-100 text-red-800",
       refunded: "bg-gray-100 text-gray-800",
+      delivered: "bg-green-100 text-green-800",
     };
     return colors[status] || "bg-gray-100 text-gray-800";
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    try {
+      return new Date(dateString).toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (e) {
+      return "Invalid Date";
+    }
+  };
+
+  const formatPrice = (price) => {
+    const numPrice = parseFloat(price);
+    return isNaN(numPrice) ? "0.00" : numPrice.toFixed(2);
   };
 
   return (
@@ -198,17 +220,17 @@ const AdminOrders = () => {
                             </span>
                           </div>
                           <p className="text-sm text-gray-600 mt-1">
-                            {new Date(order.createdAt).toLocaleString()}
+                            {formatDate(order.createdAt)}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
                         <div className="text-right">
                           <p className="text-sm text-gray-600">
-                            {order.itemsCount} items
+                            {order.itemsCount || 0} items
                           </p>
                           <p className="text-lg font-bold text-gray-900">
-                            ${parseFloat(order.totalAmount).toFixed(2)}
+                            ${formatPrice(order.totalAmount)}
                           </p>
                         </div>
                         {isExpanded ? (
@@ -237,19 +259,19 @@ const AdminOrders = () => {
                             <div className="bg-white p-4 rounded-lg space-y-2 text-sm">
                               <p>
                                 <span className="font-medium">Name:</span>{" "}
-                                {details.customer?.fullName}
+                                {details.customer?.fullName || "N/A"}
                               </p>
                               <p>
                                 <span className="font-medium">Email:</span>{" "}
-                                {details.customer?.email}
+                                {details.customer?.email || "N/A"}
                               </p>
                               <p>
                                 <span className="font-medium">Phone:</span>{" "}
-                                {details.customer?.phone}
+                                {details.customer?.phone || "N/A"}
                               </p>
                               <p>
                                 <span className="font-medium">Address:</span>{" "}
-                                {details.shipping?.fullAddress}
+                                {details.shipping?.fullAddress || "N/A"}
                               </p>
                             </div>
                           </div>
@@ -276,11 +298,11 @@ const AdminOrders = () => {
                                     </p>
                                     <p className="text-xs text-gray-600">
                                       Qty: {item.quantity} × $
-                                      {parseFloat(item.pricePerItem).toFixed(2)}
+                                      {formatPrice(item.pricePerItem)}
                                     </p>
                                   </div>
                                   <p className="text-sm font-semibold">
-                                    ${parseFloat(item.totalPrice).toFixed(2)}
+                                    ${formatPrice(item.totalPrice)}
                                   </p>
                                 </div>
                               ))}

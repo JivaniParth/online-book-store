@@ -277,33 +277,6 @@ class ApiService {
     return await this.handleResponse(response);
   }
 
-  // ==================== ADMIN (if user is admin) ====================
-
-  async adminGetStats() {
-    const response = await fetch(`${API_BASE_URL}/admin/stats`, {
-      method: "GET",
-      headers: this.getHeaders(),
-    });
-    return await this.handleResponse(response);
-  }
-
-  // Health check
-  async healthCheck() {
-    const response = await fetch(`${API_BASE_URL}/health`, {
-      method: "GET",
-      headers: this.getHeaders(false),
-    });
-    return await this.handleResponse(response);
-  }
-
-  logout() {
-    this.setToken(null);
-  }
-
-  isAuthenticated() {
-    return !!this.token;
-  }
-
   // ==================== ADMIN ====================
 
   async adminGetStats() {
@@ -381,6 +354,14 @@ class ApiService {
       `${API_BASE_URL}/admin/orders${queryString ? `?${queryString}` : ""}`,
       { method: "GET", headers: this.getHeaders() }
     );
+    return await this.handleResponse(response);
+  }
+
+  async adminGetOrderDetails(orderId) {
+    const response = await fetch(`${API_BASE_URL}/admin/orders/${orderId}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
     return await this.handleResponse(response);
   }
 
@@ -536,6 +517,23 @@ class ApiService {
       headers: this.getHeaders(),
     });
     return await this.handleResponse(response);
+  }
+
+  // Health check
+  async healthCheck() {
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: "GET",
+      headers: this.getHeaders(false),
+    });
+    return await this.handleResponse(response);
+  }
+
+  logout() {
+    this.setToken(null);
+  }
+
+  isAuthenticated() {
+    return !!this.token;
   }
 }
 

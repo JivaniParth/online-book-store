@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Users as UsersIcon,
   Edit,
@@ -31,11 +31,7 @@ const AdminUsers = () => {
     total: 0,
   });
 
-  useEffect(() => {
-    fetchUsers();
-  }, [pagination.page, searchTerm]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiService.adminGetUsers({
@@ -43,7 +39,6 @@ const AdminUsers = () => {
         per_page: 20,
       });
       if (response.success) {
-        // Filter by search term on frontend
         let filteredUsers = response.users;
         if (searchTerm) {
           filteredUsers = filteredUsers.filter(
@@ -64,7 +59,11 @@ const AdminUsers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, searchTerm]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

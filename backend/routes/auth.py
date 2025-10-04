@@ -73,22 +73,44 @@ def login():
     try:
         from database import db
         from models.user import User
+        import logging
+
+        logger = logging.getLogger(__name__)
 
         data = request.get_json()
 
         # Validate required fields
         if not data.get("email") or not data.get("password"):
+            logger.warning("Login attempt with missing email or password")
             return jsonify({"error": "Email and password are required"}), 400
 
+        email = data["email"].lower().strip()
+        password = data["password"]
+
+        logger.info(f"Login attempt for email: {email}")
+
         # Find user
-        user = User.query.filter_by(email=data["email"].lower()).first()
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            logger.warning(f"Login failed: User not found for email {email}")
+            return jsonify({"error": "Invalid email or password"}), 401
+
+        logger.info(
+            f"User found: {user.name} (ID: {user.user_id}, Type: {user.user_type})"
+        )
 
         # Check credentials
-        if not user or not user.check_password(data["password"]):
+        if not user.check_password(password):
+            logger.warning(f"Login failed: Invalid password for email {email}")
             return jsonify({"error": "Invalid email or password"}), 401
+
+        logger.info(f"Password verified for user {email}")
 
         # Create access token
         access_token = create_access_token(identity=str(user.user_id))
+
+        logger.info(f"✅ Login successful for {email}")
 
         return (
             jsonify(
@@ -103,6 +125,10 @@ def login():
         )
 
     except Exception as e:
+        import traceback
+
+        logger.error(f"Login error: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({"error": "Login failed", "details": str(e)}), 500
 
 

@@ -195,6 +195,18 @@ class Order(db.Model):
 
     def to_dict(self):
         """Convert order to dictionary"""
+        # Calculate totals dynamically if total_amount is 0 or None
+        if not self.total_amount or self.total_amount == 0:
+            subtotal = sum(item.total_price for item in self.order_items)
+            tax_amount = subtotal * Decimal("0.08")
+            shipping_cost = Decimal("0.00") if subtotal >= 50 else Decimal("5.99")
+            total_amount = subtotal + tax_amount + shipping_cost
+        else:
+            subtotal = self.subtotal
+            tax_amount = self.tax_amount
+            shipping_cost = self.shipping_cost
+            total_amount = self.total_amount
+
         return {
             "id": self.order_id,
             "orderNumber": self.order_number,
@@ -214,11 +226,11 @@ class Order(db.Model):
             },
             "payment": {"method": self.payment_method, "status": self.payment_status},
             "totals": {
-                "subtotal": float(self.subtotal),
-                "taxAmount": float(self.tax_amount),
-                "shippingCost": float(self.shipping_cost),
-                "discountAmount": float(self.discount_amount),
-                "totalAmount": float(self.total_amount),
+                "subtotal": float(subtotal),
+                "taxAmount": float(tax_amount),
+                "shippingCost": float(shipping_cost),
+                "discountAmount": 0.00,
+                "totalAmount": float(total_amount),
             },
             "items": [item.to_dict() for item in self.order_items],
             "itemsCount": self.items_count,
@@ -232,11 +244,20 @@ class Order(db.Model):
 
     def to_dict_simple(self):
         """Convert order to simple dictionary (for order lists)"""
+        # Calculate total if it's 0
+        if not self.total_amount or self.total_amount == 0:
+            subtotal = sum(item.total_price for item in self.order_items)
+            tax_amount = subtotal * Decimal("0.08")
+            shipping_cost = Decimal("0.00") if subtotal >= 50 else Decimal("5.99")
+            total_amount = subtotal + tax_amount + shipping_cost
+        else:
+            total_amount = self.total_amount
+
         return {
             "id": self.order_id,
             "orderNumber": self.order_number,
             "status": self.status,
-            "totalAmount": float(self.total_amount),
+            "totalAmount": float(total_amount),
             "itemsCount": self.items_count,
             "createdAt": self.order_date.strftime("%Y-%m-%d %H:%M:%S"),
         }
