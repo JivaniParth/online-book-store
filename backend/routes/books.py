@@ -15,8 +15,12 @@ def get_books():
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 12, type=int)
         category = request.args.get("category", "")
+        author = request.args.get("author", "")  # NEW: Filter by author
+        publisher = request.args.get("publisher", "")  # NEW: Filter by publisher
         search = request.args.get("search", "")
         sort_by = request.args.get("sort", "title")
+        min_price = request.args.get("min_price", type=float)  # NEW
+        max_price = request.args.get("max_price", type=float)  # NEW
 
         # Base query
         query = Book.query
@@ -32,11 +36,29 @@ def get_books():
 
             query = query.filter_by(category_name=category_name)
 
+        # NEW: Filter by author
+        if author:
+            query = query.filter_by(author_name=author)
+
+        # NEW: Filter by publisher
+        if publisher:
+            query = query.filter_by(publisher_name=publisher)
+
         # Filter by search term
         if search:
             query = query.filter(
-                or_(Book.title.contains(search), Book.author_name.contains(search))
+                or_(
+                    Book.title.contains(search),
+                    Book.author_name.contains(search),
+                    Book.publisher_name.contains(search),
+                )
             )
+
+        # NEW: Filter by price range
+        if min_price is not None:
+            query = query.filter(Book.price >= min_price)
+        if max_price is not None:
+            query = query.filter(Book.price <= max_price)
 
         # Sort books
         if sort_by == "price-low":
@@ -45,6 +67,12 @@ def get_books():
             query = query.order_by(Book.price.desc())
         elif sort_by == "title":
             query = query.order_by(Book.title.asc())
+        elif sort_by == "author":  # NEW
+            query = query.order_by(Book.author_name.asc())
+        elif sort_by == "publisher":  # NEW
+            query = query.order_by(Book.publisher_name.asc())
+        elif sort_by == "newest":  # NEW
+            query = query.order_by(Book.publication_date.desc())
         else:
             query = query.order_by(Book.title.asc())
 
@@ -129,3 +157,116 @@ def get_categories():
     except Exception as e:
         current_app.logger.error(f"Error fetching categories: {str(e)}")
         return jsonify({"error": "Failed to fetch categories", "details": str(e)}), 500
+
+
+@books_bp.route("/authors", methods=["GET"])
+def get_authors():
+    """Get list of all unique authors"""
+    try:
+        from database import db
+        from models.book import Book
+
+        # Get unique authors
+        authors = (
+            db.session.query(Book.author_name)
+            .distinct()
+            .order_by(Book.author_name)
+            .all()
+        )
+        author_list = [author[0] for author in authors]
+
+        return jsonify({"success": True, "authors": author_list}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error fetching authors: {str(e)}")
+        return jsonify({"error": "Failed to fetch authors", "details": str(e)}), 500
+
+
+@books_bp.route("/publishers", methods=["GET"])
+def get_publishers():
+    """Get list of all unique publishers"""
+    try:
+        from database import db
+        from models.book import Book
+
+        # Get unique publishers
+        publishers = (
+            db.session.query(Book.publisher_name)
+            .distinct()
+            .order_by(Book.publisher_name)
+            .all()
+        )
+        publisher_list = [publisher[0] for publisher in publishers]
+
+        return jsonify({"success": True, "publishers": publisher_list}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error fetching publishers: {str(e)}")
+        return jsonify({"error": "Failed to fetch publishers", "details": str(e)}), 500
+
+
+@books_bp.route("/filters", methods=["GET"])
+def get_filters():
+    """Get all available filters (categories, authors, publishers, price range)"""
+    try:
+        from database import db
+        from models.book import Book
+        from models.category import Category
+
+        # Get categories
+        categories = Category.query.all()
+        category_list = [cat.to_dict() for cat in categories]
+
+        # Get unique authors
+        authors = (
+            db.session.query(Book.author_name)
+            .distinct()
+            .order_by(Book.author_name)
+            .all()
+        )
+        author_list = [author[0] for author in authors]
+
+        # Get unique publishers
+        publishers = (
+            db.session.query(Book.publisher_name)
+            .distinct()
+            .order_by(Book.publisher_name)
+            .all()
+        )
+        publisher_list = [publisher[0] for publisher in publishers]
+
+        # Get price range
+        price_range = db.session.query(
+            db.func.min(Book.price).label("min_price"),
+            db.func.max(Book.price).label("max_price"),
+        ).first()
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "filters": {
+                        "categories": category_list,
+                        "authors": author_list,
+                        "publishers": publisher_list,
+                        "priceRange": {
+                            "min": (
+                                float(price_range.min_price)
+                                if price_range.min_price
+                                else 0
+                            ),
+                            "max": (
+                                float(price_range.max_price)
+                                if price_range.max_price
+                                else 100
+                            ),
+                        },
+                    },
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        current_app.logger.error(f"Error fetching filters: {str(e)}")
+        return jsonify({"error": "Failed to fetch filters", "details": str(e)}), 500

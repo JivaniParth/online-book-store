@@ -46,11 +46,15 @@ def create_app():
     from routes.books import books_bp
     from routes.cart import cart_bp
     from routes.orders import orders_bp
+    from routes.review import reviews_bp
+    from routes.admin import admin_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(books_bp, url_prefix="/api/books")
     app.register_blueprint(cart_bp, url_prefix="/api/cart")
     app.register_blueprint(orders_bp, url_prefix="/api/orders")
+    app.register_blueprint(reviews_bp, url_prefix="/api/reviews")
+    app.register_blueprint(admin_bp, url_prefix="/api/admin")
 
     # Health check endpoint
     @app.route("/api/health", methods=["GET"])
