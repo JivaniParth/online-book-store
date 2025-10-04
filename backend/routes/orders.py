@@ -138,9 +138,9 @@ def create_order():
             )
 
             db.session.add(order)
-            db.session.flush()
+            db.session.flush()  # Get order_id
 
-            # Create order items and update stock
+            # Create order items and calculate totals
             subtotal = Decimal("0.00")
             for cart_item in cart_items:
                 book = (
@@ -162,12 +162,12 @@ def create_order():
                 # Update book stock
                 book.stock_quantity -= cart_item.quantity
 
-            # Calculate totals
+            # ⭐ Calculate and SET total_amount BEFORE commit
             tax_amount = subtotal * Decimal("0.08")  # 8% tax
             shipping_cost = Decimal("0.00") if subtotal >= 50 else Decimal("5.99")
             total_amount = subtotal + tax_amount + shipping_cost
 
-            # Set the total amount
+            # ⭐ SET the total amount on the order object
             order.total_amount = total_amount
 
             logger.info(f"✅ Order total calculated: ${total_amount}")
@@ -178,7 +178,12 @@ def create_order():
             # Clear cart
             CartItem.query.filter_by(user_id=user_id).delete()
 
+        # Commit transaction
         db.session.commit()
+
+        logger.info(
+            f"✅ Order {order.order_id} created successfully with total ${order.total_amount}"
+        )
 
         return (
             jsonify(

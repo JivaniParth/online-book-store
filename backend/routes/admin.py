@@ -362,7 +362,13 @@ def admin_get_orders():
             page=page, per_page=per_page, error_out=False
         )
 
-        orders = [order.to_dict() for order in pagination.items]
+        orders = [order.to_dict_simple() for order in pagination.items]
+
+        # ⭐ DEBUG: Log first order
+        if orders:
+            logger.info(f"🔍 First order in list: {orders[0]}")
+            logger.info(f"🔍 Total amount: {orders[0]['totalAmount']}")
+            logger.info(f"🔍 Type: {type(orders[0]['totalAmount'])}")
 
         return (
             jsonify(
@@ -381,6 +387,9 @@ def admin_get_orders():
 
     except Exception as e:
         logger.error(f"Error fetching orders: {str(e)}")
+        import traceback
+
+        logger.error(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 
@@ -396,10 +405,25 @@ def admin_get_order_details(order_id):
         if not order:
             return jsonify({"error": "Order not found"}), 404
 
-        return jsonify({"success": True, "order": order.to_dict()}), 200
+        # ⭐ DEBUG: Log the actual values
+        logger.info(f"🔍 Order ID: {order.order_id}")
+        logger.info(f"🔍 Total Amount from DB: {order.total_amount}")
+        logger.info(f"🔍 Total Amount Type: {type(order.total_amount)}")
+
+        order_dict = order.to_dict()
+
+        logger.info(f"🔍 Total in dict: {order_dict['totals']['totalAmount']}")
+        logger.info(
+            f"🔍 Total type in dict: {type(order_dict['totals']['totalAmount'])}"
+        )
+
+        return jsonify({"success": True, "order": order_dict}), 200
 
     except Exception as e:
         logger.error(f"Error fetching order {order_id}: {str(e)}")
+        import traceback
+
+        logger.error(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 

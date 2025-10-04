@@ -26,6 +26,8 @@ class Order(db.Model):
     )
 
     # Relationships
+    # book = db.relationship("Book", backref="order_items", lazy=True)
+
     order_items = db.relationship(
         "OrderItem",
         backref="order",
@@ -193,19 +195,33 @@ class Order(db.Model):
         """Get total number of items in order"""
         return sum(item.quantity for item in self.order_items)
 
+    # In backend/models/order.py
+
     def to_dict(self):
         """Convert order to dictionary"""
-        # Calculate totals dynamically if total_amount is 0 or None
-        if not self.total_amount or self.total_amount == 0:
-            subtotal = sum(item.total_price for item in self.order_items)
+        # ⭐ Use the ACTUAL stored total_amount from database
+        # Convert Decimal to float properly
+        if self.total_amount and self.total_amount > 0:
+            total_amount = float(self.total_amount)
+        else:
+            # Fallback: calculate if total is 0 or None
+            subtotal = (
+                sum(item.total_price for item in self.order_items)
+                if self.order_items
+                else Decimal("0.00")
+            )
             tax_amount = subtotal * Decimal("0.08")
             shipping_cost = Decimal("0.00") if subtotal >= 50 else Decimal("5.99")
-            total_amount = subtotal + tax_amount + shipping_cost
-        else:
-            subtotal = self.subtotal
-            tax_amount = self.tax_amount
-            shipping_cost = self.shipping_cost
-            total_amount = self.total_amount
+            total_amount = float(subtotal + tax_amount + shipping_cost)
+
+        # Calculate component totals for display breakdown
+        subtotal = (
+            sum(item.total_price for item in self.order_items)
+            if self.order_items
+            else Decimal("0.00")
+        )
+        tax_amount = subtotal * Decimal("0.08")  # 8% tax
+        shipping_cost = Decimal("0.00") if subtotal >= 50 else Decimal("5.99")
 
         return {
             "id": self.order_id,
@@ -230,7 +246,7 @@ class Order(db.Model):
                 "taxAmount": float(tax_amount),
                 "shippingCost": float(shipping_cost),
                 "discountAmount": 0.00,
-                "totalAmount": float(total_amount),
+                "totalAmount": total_amount,  # ⭐ Already converted to float
             },
             "items": [item.to_dict() for item in self.order_items],
             "itemsCount": self.items_count,
@@ -244,20 +260,26 @@ class Order(db.Model):
 
     def to_dict_simple(self):
         """Convert order to simple dictionary (for order lists)"""
-        # Calculate total if it's 0
-        if not self.total_amount or self.total_amount == 0:
-            subtotal = sum(item.total_price for item in self.order_items)
+        # ⭐ Use ACTUAL stored total_amount from database
+        # Convert Decimal to float properly
+        if self.total_amount and self.total_amount > 0:
+            total_amount = float(self.total_amount)
+        else:
+            # Fallback: calculate if total is 0 or None
+            subtotal = (
+                sum(item.total_price for item in self.order_items)
+                if self.order_items
+                else Decimal("0.00")
+            )
             tax_amount = subtotal * Decimal("0.08")
             shipping_cost = Decimal("0.00") if subtotal >= 50 else Decimal("5.99")
-            total_amount = subtotal + tax_amount + shipping_cost
-        else:
-            total_amount = self.total_amount
+            total_amount = float(subtotal + tax_amount + shipping_cost)
 
         return {
             "id": self.order_id,
             "orderNumber": self.order_number,
             "status": self.status,
-            "totalAmount": float(total_amount),
+            "totalAmount": total_amount,  # ⭐ Already converted to float
             "itemsCount": self.items_count,
             "createdAt": self.order_date.strftime("%Y-%m-%d %H:%M:%S"),
         }

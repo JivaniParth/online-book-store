@@ -135,9 +135,19 @@ const AdminOrders = () => {
   };
 
   const formatPrice = (price) => {
+    if (price === null || price === undefined) return "0.00";
     const numPrice = parseFloat(price);
     return isNaN(numPrice) ? "0.00" : numPrice.toFixed(2);
   };
+
+  // Debug: Log the order data to see what we're getting
+  useEffect(() => {
+    if (orders.length > 0) {
+      console.log("First order data:", orders[0]);
+      console.log("Total amount:", orders[0].totalAmount);
+      console.log("Type:", typeof orders[0].totalAmount);
+    }
+  }, [orders]);
 
   return (
     <div className="space-y-6">
