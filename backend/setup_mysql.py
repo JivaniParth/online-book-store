@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 MySQL Database Setup Script for BookHaven
 This script verifies your MySQL connection and ensures tables exist
@@ -74,21 +73,22 @@ def verify_tables():
     app = create_app()
 
     required_tables = [
-        "User",
-        "Publisher",
-        "Category",
-        "Author",
-        "Book_Details",
-        "Cart",
-        "Book_Order",
-        "Order_Item",
-        "Review",
+        "author",
+        "book_details",
+        "book_order",
+        "cart",
+        "category",
+        "order_item",
+        "publisher",
+        "review",
+        "user",
     ]
 
     try:
         with app.app_context():
             # Get existing tables
-            result = db.engine.execute("SHOW TABLES")
+            db.engine.connect().execute("USE bookstore")
+            result = db.engine.connect().execute("SHOW TABLES")
             existing_tables = [row[0] for row in result]
 
             print(f"\nChecking for required tables...")
