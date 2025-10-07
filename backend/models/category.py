@@ -3,7 +3,7 @@ from datetime import datetime
 
 
 class Category(db.Model):
-    __tablename__ = "Category"  # Matches your DDL
+    __tablename__ = "category"  # Matches your DDL
 
     category_name = db.Column(db.String(255), primary_key=True)
     description = db.Column(db.Text, nullable=True)

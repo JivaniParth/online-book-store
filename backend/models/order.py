@@ -7,7 +7,7 @@ from decimal import Decimal
 
 
 class Order(db.Model):
-    __tablename__ = "Book_Order"
+    __tablename__ = "book_order"
 
     order_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(

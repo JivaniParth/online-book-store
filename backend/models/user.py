@@ -4,13 +4,13 @@ import bcrypt
 
 
 class User(db.Model):
-    __tablename__ = "User"  # Matches your DDL
+    __tablename__ = "user"  # Changed from "User" to lowercase
 
-    user_id = db.Column("user_id", db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     phone = db.Column(db.String(20), nullable=True)
-    password = db.Column("password", db.String(255), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
     user_type = db.Column(
         db.Enum("customer", "admin", name="user_type_enum"),
         nullable=False,
@@ -20,36 +20,45 @@ class User(db.Model):
     city = db.Column(db.String(100), nullable=True)
     registration_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
-    # Relationships
+    # Relationships with cascade delete
     cart_items = db.relationship(
-        "CartItem", backref="user", lazy=True, foreign_keys="CartItem.user_id"
+        "CartItem",
+        backref="user",
+        lazy=True,
+        cascade="all, delete-orphan",
+        foreign_keys="CartItem.user_id",
     )
     orders = db.relationship(
-        "Order", backref="user", lazy=True, foreign_keys="Order.user_id"
+        "Order",
+        backref="user",
+        lazy=True,
+        cascade="all, delete-orphan",
+        foreign_keys="Order.user_id",
     )
     reviews = db.relationship(
-        "Review", backref="user", lazy=True, foreign_keys="Review.user_id"
+        "Review",
+        backref="user",
+        lazy=True,
+        cascade="all, delete-orphan",
+        foreign_keys="Review.user_id",
     )
 
-    # Property for backward compatibility with old code
     @property
     def id(self):
         return self.user_id
 
     @property
     def first_name(self):
-        """Extract first name from full name"""
         return self.name.split()[0] if self.name else ""
 
     @property
     def last_name(self):
-        """Extract last name from full name"""
         parts = self.name.split()
         return " ".join(parts[1:]) if len(parts) > 1 else ""
 
     @property
     def is_active(self):
-        return True  # Default to active
+        return True
 
     @property
     def created_at(self):
@@ -80,7 +89,7 @@ class User(db.Model):
             "phone": self.phone,
             "address": self.address,
             "city": self.city,
-            "postalCode": "",  # Not in your DDL
+            "postalCode": "",
             "joinedDate": self.registration_date.strftime("%Y-%m-%d"),
             "avatar": self.get_avatar_url(),
             "user_type": self.user_type,

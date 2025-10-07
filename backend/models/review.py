@@ -3,7 +3,7 @@ from datetime import datetime
 
 
 class Review(db.Model):
-    __tablename__ = "Review"  # Matches your DDL table name
+    __tablename__ = "review"  # Matches your DDL table name
 
     review_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey("User.user_id"), nullable=False)
