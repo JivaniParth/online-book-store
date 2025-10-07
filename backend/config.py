@@ -8,19 +8,17 @@ load_dotenv()
 
 class Config:
     # Basic Flask configuration
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "your-super-secret-key-change-this"
+    SECRET_KEY = os.environ.get("SECRET_KEY")
 
     # JWT Configuration
-    JWT_SECRET_KEY = (
-        os.environ.get("JWT_SECRET_KEY") or "your-jwt-secret-key-change-this"
-    )
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=1)  # Token expires in 1 day
     JWT_ALGORITHM = "HS256"
 
     # Database configuration
     MYSQL_HOST = os.environ.get("MYSQL_HOST") or "localhost"
-    MYSQL_USER = os.environ.get("MYSQL_USER") or "root"
-    MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD") or "your_mysql_password"
+    MYSQL_USER = os.environ.get("MYSQL_USER") or "parth"
+    MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD") or "password"
     MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE") or "bookstore"
     MYSQL_PORT = int(os.environ.get("MYSQL_PORT") or 3306)
 
