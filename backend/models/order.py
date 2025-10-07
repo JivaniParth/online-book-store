@@ -11,7 +11,9 @@ class Order(db.Model):
 
     order_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(
-        db.Integer, db.ForeignKey("User.user_id", ondelete="CASCADE"), nullable=False
+        db.Integer,
+        db.ForeignKey("user.user_id", ondelete="CASCADE"),
+        nullable=False,  # FIXED: lowercase
     )
     customer_name = db.Column(db.String(255), nullable=False)
     customer_email = db.Column(db.String(255), nullable=False)
@@ -245,17 +247,17 @@ class Order(db.Model):
 
 
 class OrderItem(db.Model):
-    __tablename__ = "Order_Item"
+    __tablename__ = "order_item"  # FIXED: lowercase and consistent
 
     order_item_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     order_id = db.Column(
         db.Integer,
-        db.ForeignKey("Book_Order.order_id", ondelete="CASCADE"),
+        db.ForeignKey("book_order.order_id", ondelete="CASCADE"),  # FIXED: lowercase
         nullable=False,
     )
     book_id = db.Column(
         db.String(13),
-        db.ForeignKey("Book_Details.isbn", ondelete="CASCADE"),
+        db.ForeignKey("book_details.isbn", ondelete="CASCADE"),  # FIXED: lowercase
         nullable=False,
     )
     quantity = db.Column(db.Integer, nullable=False)

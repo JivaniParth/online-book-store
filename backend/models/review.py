@@ -3,12 +3,22 @@ from datetime import datetime
 
 
 class Review(db.Model):
-    __tablename__ = "review"  # Matches your DDL table name
+    __tablename__ = "review"
 
     review_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("User.user_id"), nullable=False)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "user.user_id", ondelete="CASCADE"
+        ),  # FIXED: lowercase and added cascade
+        nullable=False,
+    )
     book_id = db.Column(
-        db.String(13), db.ForeignKey("Book_Details.isbn"), nullable=False
+        db.String(13),
+        db.ForeignKey(
+            "book_details.isbn", ondelete="CASCADE"
+        ),  # FIXED: lowercase and added cascade
+        nullable=False,
     )
     rating = db.Column(db.Integer, nullable=False)
     review_text = db.Column(db.Text, nullable=True)
