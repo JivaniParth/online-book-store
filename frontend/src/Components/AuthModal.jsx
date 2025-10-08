@@ -35,6 +35,32 @@ const AuthModal = ({ isOpen, onClose, initialMode = "login" }) => {
     }
   };
 
+  const validatePassword = (password) => {
+    const errors = [];
+
+    if (password.length < 8) {
+      errors.push("Password must be at least 8 characters long");
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      errors.push("Password must contain at least one uppercase letter");
+    }
+
+    if (!/[a-z]/.test(password)) {
+      errors.push("Password must contain at least one lowercase letter");
+    }
+
+    if (!/\d/.test(password)) {
+      errors.push("Password must contain at least one digit");
+    }
+
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      errors.push("Password must contain at least one special character");
+    }
+
+    return errors;
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -46,8 +72,11 @@ const AuthModal = ({ isOpen, onClose, initialMode = "login" }) => {
 
     if (!formData.password) {
       newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    } else {
+      const passwordErrors = validatePassword(formData.password);
+      if (passwordErrors.length > 0) {
+        newErrors.password = passwordErrors.join(". ");
+      }
     }
 
     if (mode === "signup") {
@@ -244,6 +273,52 @@ const AuthModal = ({ isOpen, onClose, initialMode = "login" }) => {
               </div>
               {errors.password && (
                 <p className="mt-1 text-xs text-red-600">{errors.password}</p>
+              )}
+
+              {/* Password Requirements Hint */}
+              {mode === "signup" && (
+                <div className="mt-2 text-xs text-gray-500">
+                  <p>Password must contain:</p>
+                  <ul className="list-disc list-inside ml-2 space-y-1">
+                    <li
+                      className={
+                        formData.password.length >= 8 ? "text-green-600" : ""
+                      }
+                    >
+                      At least 8 characters
+                    </li>
+                    <li
+                      className={
+                        /[A-Z]/.test(formData.password) ? "text-green-600" : ""
+                      }
+                    >
+                      One uppercase letter
+                    </li>
+                    <li
+                      className={
+                        /[a-z]/.test(formData.password) ? "text-green-600" : ""
+                      }
+                    >
+                      One lowercase letter
+                    </li>
+                    <li
+                      className={
+                        /\d/.test(formData.password) ? "text-green-600" : ""
+                      }
+                    >
+                      One digit
+                    </li>
+                    <li
+                      className={
+                        /[!@#$%^&*(),.?":{}|<>]/.test(formData.password)
+                          ? "text-green-600"
+                          : ""
+                      }
+                    >
+                      One special character
+                    </li>
+                  </ul>
+                </div>
               )}
             </div>
 

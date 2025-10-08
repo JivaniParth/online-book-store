@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from functools import wraps
 import logging
+import traceback
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -104,6 +105,32 @@ def admin_create_book():
         if Book.query.filter_by(isbn=data["isbn"]).first():
             return jsonify({"error": "Book with this ISBN already exists"}), 400
 
+        # Ensure author exists
+        author_check = db.session.execute(
+            db.text("SELECT author_name FROM author WHERE author_name = :name"),
+            {"name": data["author_name"]},
+        ).fetchone()
+
+        # Ensure publisher exists
+        publisher_check = db.session.execute(
+            db.text(
+                "SELECT publisher_name FROM publisher WHERE publisher_name = :name"
+            ),
+            {"name": data["publisher_name"]},
+        ).fetchone()
+        if not publisher_check:
+            from datetime import date
+
+        # Ensure category exists
+        category_check = db.session.execute(
+            db.text("SELECT category_name FROM category WHERE category_name = :name"),
+            {"name": data["category_name"]},
+        ).fetchone()
+
+        # Commit the foreign key records first
+        db.session.commit()
+
+        # Now create the book
         book = Book(
             isbn=data["isbn"],
             title=data["title"],
@@ -780,17 +807,33 @@ def admin_create_category():
 
         data = request.get_json()
 
+        logger.info(f"📝 CREATE Category Request: {data}")
+
+        # Validate
         if not data.get("name"):
+            logger.error("❌ Missing category name")
             return jsonify({"error": "name is required"}), 400
 
         # Check if exists
-        if Category.query.filter_by(category_name=data["name"]).first():
+        existing = Category.query.filter_by(category_name=data["name"]).first()
+        if existing:
+            logger.error(f"❌ Category already exists: {data['name']}")
             return jsonify({"error": "Category already exists"}), 400
 
+        # Create category
         category = Category(name=data["name"], description=data.get("description"))
 
+        logger.info(f"✅ Created category object: {category}")
+
+        # Add and commit
         db.session.add(category)
+        db.session.flush()  # This will catch errors before commit
+
+        logger.info(f"✅ Added to session, now committing...")
+
         db.session.commit()
+
+        logger.info(f"✅ Category created successfully: {category.category_name}")
 
         return (
             jsonify(
@@ -804,11 +847,10 @@ def admin_create_category():
         )
 
     except Exception as e:
-        from database import db
-
         db.session.rollback()
-        logger.error(f"Error creating category: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"❌ Error creating category: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @admin_bp.route("/categories/<category_name>", methods=["PUT"])

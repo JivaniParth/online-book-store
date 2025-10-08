@@ -29,10 +29,6 @@ class Category(db.Model):
     def is_active(self):
         return True
 
-    @property
-    def created_at(self):
-        return datetime.now(datetime.timezone.utc)
-
     def to_dict(self):
         """Convert category object to dictionary"""
         return {

@@ -42,6 +42,8 @@ def create_app():
     import models.cart
     import models.order
     import models.review
+    import models.author
+    import models.publisher
 
     # Import and register blueprints
     from routes.auth import auth_bp
