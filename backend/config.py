@@ -30,7 +30,8 @@ class Config:
         "pool_size": 10,
         "max_overflow": 20,
         "pool_timeout": 30,
-        "echo": False,  # Set to True for debugging SQL
+        "echo": True,
+        "isolation_level": "READ COMMITTED",
     }
 
     # IMPORTANT: Disable autoflush to prevent premature commits

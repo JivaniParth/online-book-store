@@ -8,16 +8,12 @@ class Review(db.Model):
     review_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(
         db.Integer,
-        db.ForeignKey(
-            "user.user_id", ondelete="CASCADE"
-        ),  # FIXED: lowercase and added cascade
+        db.ForeignKey("user.user_id", ondelete="CASCADE"),
         nullable=False,
     )
     book_id = db.Column(
         db.String(13),
-        db.ForeignKey(
-            "book_details.isbn", ondelete="CASCADE"
-        ),  # FIXED: lowercase and added cascade
+        db.ForeignKey("book_details.isbn", ondelete="CASCADE"),
         nullable=False,
     )
     rating = db.Column(db.Integer, nullable=False)

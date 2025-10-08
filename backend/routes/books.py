@@ -15,12 +15,12 @@ def get_books():
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 12, type=int)
         category = request.args.get("category", "")
-        author = request.args.get("author", "")  # NEW: Filter by author
-        publisher = request.args.get("publisher", "")  # NEW: Filter by publisher
+        author = request.args.get("author", "")
+        publisher = request.args.get("publisher", "")
         search = request.args.get("search", "")
         sort_by = request.args.get("sort", "title")
-        min_price = request.args.get("min_price", type=float)  # NEW
-        max_price = request.args.get("max_price", type=float)  # NEW
+        min_price = request.args.get("min_price", type=float)
+        max_price = request.args.get("max_price", type=float)
 
         # Base query
         query = Book.query
@@ -36,11 +36,11 @@ def get_books():
 
             query = query.filter_by(category_name=category_name)
 
-        # NEW: Filter by author
+        # Filter by author
         if author:
             query = query.filter_by(author_name=author)
 
-        # NEW: Filter by publisher
+        # Filter by publisher
         if publisher:
             query = query.filter_by(publisher_name=publisher)
 
@@ -54,7 +54,7 @@ def get_books():
                 )
             )
 
-        # NEW: Filter by price range
+        # Filter by price range
         if min_price is not None:
             query = query.filter(Book.price >= min_price)
         if max_price is not None:
@@ -67,11 +67,11 @@ def get_books():
             query = query.order_by(Book.price.desc())
         elif sort_by == "title":
             query = query.order_by(Book.title.asc())
-        elif sort_by == "author":  # NEW
+        elif sort_by == "author":
             query = query.order_by(Book.author_name.asc())
-        elif sort_by == "publisher":  # NEW
+        elif sort_by == "publisher":
             query = query.order_by(Book.publisher_name.asc())
-        elif sort_by == "newest":  # NEW
+        elif sort_by == "newest":
             query = query.order_by(Book.publication_date.desc())
         else:
             query = query.order_by(Book.title.asc())

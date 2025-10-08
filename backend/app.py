@@ -5,6 +5,14 @@ from flask_jwt_extended import JWTManager
 from datetime import timedelta
 from config import Config
 from database import db
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+
+# Add SQL query logging
+logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
 
 def create_app():

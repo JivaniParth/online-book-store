@@ -4,7 +4,7 @@ import bcrypt
 
 
 class User(db.Model):
-    __tablename__ = "user"  # Changed from "User" to lowercase
+    __tablename__ = "user"
 
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(255), nullable=False)
@@ -25,21 +25,24 @@ class User(db.Model):
         "CartItem",
         backref="user",
         lazy=True,
-        cascade="all, delete-orphan",
+        cascade="all, delete",
+        passive_deletes=True,
         foreign_keys="CartItem.user_id",
     )
     orders = db.relationship(
         "Order",
         backref="user",
         lazy=True,
-        cascade="all, delete-orphan",
+        cascade="all, delete",
+        passive_deletes=True,
         foreign_keys="Order.user_id",
     )
     reviews = db.relationship(
         "Review",
         backref="user",
         lazy=True,
-        cascade="all, delete-orphan",
+        cascade="all, delete",
+        passive_deletes=True,
         foreign_keys="Review.user_id",
     )
 

@@ -4,7 +4,7 @@ from sqlalchemy import ForeignKey
 
 
 class CartItem(db.Model):
-    __tablename__ = "cart"  # Changed to lowercase
+    __tablename__ = "cart"
 
     cart_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(

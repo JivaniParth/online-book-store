@@ -1,5 +1,136 @@
 USE bookstore;
 
+-- Drop existing tables in reverse order of dependencies
+DROP TABLE IF EXISTS review;
+DROP TABLE IF EXISTS order_item;
+DROP TABLE IF EXISTS book_order;
+DROP TABLE IF EXISTS cart;
+DROP TABLE IF EXISTS book_details;
+DROP TABLE IF EXISTS author;
+DROP TABLE IF EXISTS category;
+DROP TABLE IF EXISTS publisher;
+DROP TABLE IF EXISTS user;
+
+-- User entity
+CREATE TABLE user (
+    user_id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(20),
+    password VARCHAR(255) NOT NULL,
+    user_type ENUM('customer', 'admin') NOT NULL DEFAULT 'customer',
+    address TEXT,
+    city VARCHAR(100),
+    registration_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_email (email),
+    INDEX idx_user_type (user_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Publisher entity
+CREATE TABLE publisher (
+    publisher_name VARCHAR(255) PRIMARY KEY,
+    address TEXT,
+    city VARCHAR(100),
+    phone VARCHAR(20),
+    email VARCHAR(255),
+    established_date DATE NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Category entity
+CREATE TABLE category (
+    category_name VARCHAR(255) PRIMARY KEY,
+    description TEXT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Author entity
+CREATE TABLE author (
+    author_name VARCHAR(255) PRIMARY KEY,
+    biography TEXT,
+    nationality VARCHAR(100)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Book entity (with proper cascading)
+CREATE TABLE book_details (
+    isbn VARCHAR(13) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    author_name VARCHAR(255) NOT NULL,
+    publisher_name VARCHAR(255) NOT NULL,
+    category_name VARCHAR(255) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    publication_date DATE,
+    pages INT,
+    stock_quantity INT NOT NULL DEFAULT 0,
+    description TEXT,
+    image VARCHAR(255),
+    INDEX idx_title (title),
+    INDEX idx_author (author_name),
+    INDEX idx_category (category_name),
+    INDEX idx_publisher (publisher_name),
+    FOREIGN KEY (author_name) REFERENCES author(author_name) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (publisher_name) REFERENCES publisher(publisher_name) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (category_name) REFERENCES category(category_name) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Cart entity (with CASCADE delete when user is deleted)
+CREATE TABLE cart (
+    cart_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    book_id VARCHAR(13) NOT NULL,
+    quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
+    date_added DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_cart (user_id),
+    INDEX idx_book_cart (book_id),
+    UNIQUE KEY unique_user_book (user_id, book_id),
+    FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES book_details(isbn) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Order entity (with CASCADE delete when user is deleted)
+CREATE TABLE book_order (
+    order_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    payment_method VARCHAR(50) NOT NULL,
+    shipping_address TEXT NOT NULL,
+    total_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    order_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    payment_status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
+    INDEX idx_user_order (user_id),
+    INDEX idx_order_date (order_date),
+    INDEX idx_payment_status (payment_status),
+    FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Order_Item entity (with CASCADE delete when order is deleted)
+CREATE TABLE order_item (
+    order_item_id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    book_id VARCHAR(13) NOT NULL,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    unit_price DECIMAL(10, 2) NOT NULL,
+    INDEX idx_order_items (order_id),
+    INDEX idx_book_items (book_id),
+    FOREIGN KEY (order_id) REFERENCES book_order(order_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES book_details(isbn) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Review entity (with CASCADE delete when user is deleted)
+CREATE TABLE review (
+    review_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    book_id VARCHAR(13) NOT NULL,
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    review_text TEXT,
+    review_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_review (user_id),
+    INDEX idx_book_review (book_id),
+    UNIQUE KEY unique_user_book_review (user_id, book_id),
+    FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES book_details(isbn) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO category (category_name, description) VALUES
 ('Classics', 'Timeless literary works that have stood the test of time'),
 ('Science Fiction', 'Futuristic and sci-fi novels exploring technology and space'),
@@ -45,13 +176,13 @@ INSERT INTO book_details (isbn, title, author_name, publisher_name, category_nam
 
 -- Insert Users (password for all users: password123)
 INSERT INTO user (name, email, phone, password, user_type, address, city, registration_date) VALUES
-('Admin User', 'admin@bookhaven.com', '+1-555-0100', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5V7LMxM1VDR.a', 'admin', '123 Admin Street', 'New York', '2024-01-15 10:00:00'),
+('Parth Jivani', 'parth@bookhaven.com', '+1-555-0100', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5V7LMxM1VDR.a', 'admin', '123 Admin Street', 'New York', '2024-01-15 10:00:00'),
+('Nirjari Sheth', 'nirjari@bookhaven.com', '+1-555-0200', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5V7LMxM1VDR.a', 'admin', '123 Admin Street', 'New York', '2024-01-15 10:00:00'),
 ('John Doe', 'john.doe@example.com', '+1-555-0101', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5V7LMxM1VDR.a', 'customer', '456 Customer Ave', 'Los Angeles', '2024-02-20 14:30:00'),
 ('Jane Smith', 'jane.smith@example.com', '+1-555-0102', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5V7LMxM1VDR.a', 'customer', '789 Reader Blvd', 'Chicago', '2024-03-10 09:15:00'),
 ('Bob Wilson', 'bob.wilson@example.com', '+1-555-0103', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5V7LMxM1VDR.a', 'customer', '321 Book Lane', 'Houston', '2024-03-25 16:45:00'),
 ('Alice Johnson', 'alice.j@example.com', '+1-555-0104', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5V7LMxM1VDR.a', 'customer', '654 Library St', 'Phoenix', '2024-04-05 11:20:00');
 
--- Insert Sample Cart Items (for user_id 2 - John Doe)
 INSERT INTO cart (user_id, book_id, quantity, date_added) VALUES
 (2, '9780743273565', 1, '2024-10-01 10:00:00'),
 (2, '9780451524935', 2, '2024-10-02 14:30:00'),
@@ -100,5 +231,8 @@ UNION ALL
 SELECT 'Order Items:', COUNT(*) FROM order_item
 UNION ALL
 SELECT 'Reviews:', COUNT(*) FROM review;
+
+-- Verify table creation
+SELECT 'Database schema created successfully!' AS status;
 
 COMMIT;

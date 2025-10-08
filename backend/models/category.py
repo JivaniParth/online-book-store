@@ -3,12 +3,15 @@ from datetime import datetime
 
 
 class Category(db.Model):
-    __tablename__ = "category"  # Matches your DDL
+    __tablename__ = "category"
 
     category_name = db.Column(db.String(255), primary_key=True)
     description = db.Column(db.Text, nullable=True)
 
-    # Properties for backward compatibility
+    def __init__(self, name, description=None):
+        self.category_name = name
+        self.description = description
+
     @property
     def id(self):
         return self.slug
@@ -24,19 +27,11 @@ class Category(db.Model):
 
     @property
     def is_active(self):
-        return True  # All categories active by default
+        return True
 
     @property
     def created_at(self):
-        return datetime.utcnow()
-
-    def __init__(self, name, description=None):
-        self.category_name = name
-        self.description = description
-
-    def generate_slug(self, name):
-        """Generate URL-friendly slug from name"""
-        return name.lower().replace(" ", "-").replace("&", "and")
+        return datetime.now(datetime.timezone.utc)
 
     def to_dict(self):
         """Convert category object to dictionary"""

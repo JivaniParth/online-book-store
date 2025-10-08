@@ -1,8 +1,6 @@
 from database import db
 from datetime import datetime
-import string
-import random
-from sqlalchemy import Numeric
+from sqlalchemy import Numeric, ForeignKey
 from decimal import Decimal
 
 
@@ -11,9 +9,7 @@ class Order(db.Model):
 
     order_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("user.user_id", ondelete="CASCADE"),
-        nullable=False,  # FIXED: lowercase
+        db.Integer, ForeignKey("user.user_id", ondelete="CASCADE"), nullable=False
     )
     customer_name = db.Column(db.String(255), nullable=False)
     customer_email = db.Column(db.String(255), nullable=False)
@@ -29,6 +25,7 @@ class Order(db.Model):
         default="pending",
     )
 
+    # Relationships
     order_items = db.relationship(
         "OrderItem",
         backref="order",
@@ -77,44 +74,8 @@ class Order(db.Model):
         return " ".join(parts[1:]) if len(parts) > 1 else ""
 
     @property
-    def email(self):
-        return self.customer_email
-
-    @property
-    def address(self):
-        return self.shipping_address
-
-    @property
-    def city(self):
-        return ""
-
-    @property
-    def postal_code(self):
-        return ""
-
-    @property
-    def created_at(self):
-        return self.order_date
-
-    @property
-    def updated_at(self):
-        return self.order_date
-
-    @property
-    def subtotal(self):
-        return sum(item.total_price for item in self.order_items)
-
-    @property
-    def tax_amount(self):
-        return self.subtotal * Decimal("0.08")
-
-    @property
-    def shipping_cost(self):
-        return Decimal("0.00") if self.subtotal >= 50 else Decimal("5.99")
-
-    @property
-    def discount_amount(self):
-        return Decimal("0.00")
+    def items_count(self):
+        return sum(item.quantity for item in self.order_items)
 
     def __init__(
         self,
@@ -139,21 +100,12 @@ class Order(db.Model):
         self.payment_status = "pending"
 
     def calculate_totals(self):
+        """Calculate and set total amount"""
         subtotal = sum(item.total_price for item in self.order_items)
         tax = subtotal * Decimal("0.08")
         shipping = Decimal("0.00") if subtotal >= 50 else Decimal("5.99")
         self.total_amount = subtotal + tax + shipping
         return self.total_amount
-
-    def add_item(self, book, quantity, price_per_item):
-        order_item = OrderItem(
-            book_id=book.isbn, quantity=quantity, price_per_item=price_per_item
-        )
-        self.order_items.append(order_item)
-        self.calculate_totals()
-
-    def update_status(self, new_status):
-        self.status = new_status
 
     def can_cancel(self):
         return self.payment_status in ["pending"]
@@ -164,23 +116,8 @@ class Order(db.Model):
             return True
         return False
 
-    @property
-    def full_name(self):
-        return self.customer_name
-
-    @property
-    def full_address(self):
-        return self.shipping_address
-
-    @property
-    def items_count(self):
-        return sum(item.quantity for item in self.order_items)
-
     def to_dict(self):
-        # Use stored total_amount, convert Decimal to float
         total_amount = float(self.total_amount) if self.total_amount else 0.00
-
-        # Calculate component totals for display
         subtotal = (
             sum(item.total_price for item in self.order_items)
             if self.order_items
@@ -201,9 +138,6 @@ class Order(db.Model):
                 "fullName": self.customer_name,
             },
             "shipping": {
-                "address": self.shipping_address,
-                "city": self.city,
-                "postalCode": self.postal_code,
                 "fullAddress": self.shipping_address,
             },
             "payment": {"method": self.payment_method, "status": self.payment_status},
@@ -211,22 +145,15 @@ class Order(db.Model):
                 "subtotal": float(subtotal),
                 "taxAmount": float(tax_amount),
                 "shippingCost": float(shipping_cost),
-                "discountAmount": 0.00,
                 "totalAmount": total_amount,
             },
             "items": [item.to_dict() for item in self.order_items],
             "itemsCount": self.items_count,
-            "timestamps": {
-                "createdAt": self.order_date.strftime("%Y-%m-%d %H:%M:%S"),
-                "updatedAt": self.order_date.strftime("%Y-%m-%d %H:%M:%S"),
-                "shippedAt": None,
-                "deliveredAt": None,
-            },
+            "createdAt": self.order_date.strftime("%Y-%m-%d %H:%M:%S"),
         }
 
     def to_dict_simple(self):
         total_amount = float(self.total_amount) if self.total_amount else 0.00
-
         return {
             "id": self.order_id,
             "orderNumber": self.order_number,
@@ -236,28 +163,22 @@ class Order(db.Model):
             "createdAt": self.order_date.strftime("%Y-%m-%d %H:%M:%S"),
         }
 
-    @classmethod
-    def get_user_orders(cls, user_id):
-        return (
-            cls.query.filter_by(user_id=user_id).order_by(cls.order_date.desc()).all()
-        )
-
     def __repr__(self):
         return f"<Order {self.order_number} - {self.status}>"
 
 
 class OrderItem(db.Model):
-    __tablename__ = "order_item"  # FIXED: lowercase and consistent
+    __tablename__ = "order_item"
 
     order_item_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     order_id = db.Column(
         db.Integer,
-        db.ForeignKey("book_order.order_id", ondelete="CASCADE"),  # FIXED: lowercase
+        ForeignKey("book_order.order_id", ondelete="CASCADE"),
         nullable=False,
     )
     book_id = db.Column(
         db.String(13),
-        db.ForeignKey("book_details.isbn", ondelete="CASCADE"),  # FIXED: lowercase
+        ForeignKey("book_details.isbn", ondelete="CASCADE"),
         nullable=False,
     )
     quantity = db.Column(db.Integer, nullable=False)
@@ -266,14 +187,6 @@ class OrderItem(db.Model):
     @property
     def id(self):
         return self.order_item_id
-
-    @property
-    def price_per_item(self):
-        return self.unit_price
-
-    @property
-    def created_at(self):
-        return datetime.utcnow()
 
     def __init__(self, book_id, quantity, price_per_item):
         self.book_id = book_id
@@ -296,10 +209,7 @@ class OrderItem(db.Model):
             "quantity": self.quantity,
             "pricePerItem": float(self.unit_price),
             "totalPrice": float(self.total_price),
-            "createdAt": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
         }
 
     def __repr__(self):
-        return (
-            f"<OrderItem Order:{self.order_id} Book:{self.book_id} Qty:{self.quantity}>"
-        )
+        return f"<OrderItem Order:{self.order_id} Book:{self.book_id}>"
