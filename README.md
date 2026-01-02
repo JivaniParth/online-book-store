@@ -2007,7 +2007,7 @@ WantedBy=multi-user.target
 
 ## Changelog
 
-### Version 1.0.0 (December 2024)
+### Version 1.0.0 (November 2024)
 
 - Initial release
 - User authentication and profile management
@@ -2016,17 +2016,14 @@ WantedBy=multi-user.target
 - Order processing with COD payment
 - Responsive design for all devices
 
-### Future Versions
-
-- v1.1.0: Admin dashboard and book management
-- v1.2.0: Payment gateway integration
-- v1.3.0: Email notifications and order tracking
-- v2.0.0: Mobile app and advanced features
-
 ---
 
 **Document Version**: 1.0
-**Last Updated**: December 28, 2024
-**Authors**: BookHaven Development Team
+**Last Updated**: November 28, 2024
+**Author**: Parth Jivani
 
 This documentation is maintained as part of the BookHaven project and is updated with each major release.
+
+> This project is part of the **BookHaven System Design Study**  
+> 🔗 Main repository: https://github.com/JivaniParth/BookHaven-System-Design-Study
+
